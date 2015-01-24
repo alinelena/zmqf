@@ -85,17 +85,19 @@ def processFunctions(functions,head):
       tt='function'
     fname=camel(name)
     if len(args)>1:
-      ans+="{0:s} {1:s}({2:s})\n".format(tt,camel(name),listArgs(args))
+      ans+="{0:s} {1:s}({2:s}) bind(c,name='{3:s}')\n".format(tt,camel(name),
+           listArgs(args),name.replace('*',''))
       ans+=typeArgs(args)
     else:
-      ans+="{0:s} {1:s}()\n".format(tt,camel(name))
+      ans+="{0:s} {1:s}() bind(c,name='{2:s}')\n".format(tt,camel(name),name.replace('*',''))
     if typ != 'void':
       ans+="{0:s} :: {1:s}\n".format(typesd[typ],fname)
+    ans+='end {0:s} {1:s}\n'.format(tt,fname)
     ans+='end interface\n'
   ans+='end module\n'
   return ans
-def createmodule():
 
+def createmodule():
   inh="/usr/include/zmq.h"
   lines=open(inh).read().replace("\\\n",'').split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
