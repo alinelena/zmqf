@@ -5,7 +5,12 @@ import os, sys, re
 typesd={'int':'integer(c_int)','long int':'integer(c_long)',
   'long':'integer(c_long)','size_t':'integer(c_size_t)', 
   'void*':'type(c_ptr), value','void':None,
-  'char*':'character(kind=c_char), dimension(*)','uint8_t*':'uint8_t*'
+  'char*':'character(kind=c_char), dimension(*)',
+  'uint8_t*':'integer(c_int8_t), dimension(*)',
+  'uint16_t':'integer(c_int16_t)',
+  'int32_t':'integer(c_int32_t)',
+  'short':'integer(c_short)',
+  'short int':'integer(c_short)'
 }
 
 def breakLine(line):
@@ -52,7 +57,7 @@ def processDefines(defines):
         cons+=ll
     else:
       cons+="{0:s} {1:s}\n".format(rhs,lhs[0])
-  cons+="integer, parameter :: ZMQ_VERSION = 10000*ZMQ_VERSION_MAJOR + 100*ZMQ_VERSION_MINOR + ZMQ_VERSION_PATCH\n"  
+  cons+="integer, parameter :: ZMQ_VERSION_K = 10000*ZMQ_VERSION_MAJOR + 100*ZMQ_VERSION_MINOR + ZMQ_VERSION_PATCH\n"  
   return cons
 
 def listArgs(args):
@@ -82,9 +87,10 @@ def typeArgs(args):
   return ans,set(imp)
 
 def processFunctions(functions):
-  ans='\n  interface\n'
+  ans=''
   for function in functions:
     ans+='\n!! {0:s}\n'.format(function) 
+    ans+='  interface\n'
     name=function.split('(')[0].split()[-1].strip()
     typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
     args=function.split('(')[1].replace(');','').split(',')
@@ -113,7 +119,7 @@ def processFunctions(functions):
     if typ != 'void':
       ans+="      {0:s} :: {1:s}\n".format(typesd[typ],fname)
     ans+='    end {0:s} {1:s}\n'.format(tt,fname)
-  ans+='  end interface\n'
+    ans+='  end interface\n'
   
   return ans
 
@@ -122,27 +128,19 @@ def figure_types(l):
     tmp = l.replace('*', '* ').strip('; ').split(',')
     names = ', '.join([tmp[0].split()[-1]] + tmp[1:])
     ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
-    #print(ctype, names)
     if ctype not in typesd:
         ftype = '*to be def* ' + ctype
     else:
         ftype = typesd[ctype]
         
-    return ftype + ' :: ' + names
+    return ftype.replace(', value','') + ' :: ' + names
 
 
 def processStructs(s, indent):
     
     struct_spt = re.compile(r'struct \s* { \s* (.*?) \s* } \s* (\w+) \s*; (?isx)')
-    
     structs = struct_spt.findall(s)
     
-    ##re.search(r"('ZMQ_EXPORT'.*?';')",blob)
-    
-    #for i in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?sx)', s):
-        #print(i,'\n')
-    
-    #sys.exit(0)
     fstructs = []
     for st in structs:
         ft = []
