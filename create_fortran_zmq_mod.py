@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import re
+
 typesd={'int':'integer(c_int)','long int':'integer(c_long)',
 'long':'integer(c_long)','size_t':'integer(c_size_t)', 
 'void*':'type(c_ptr), value','void':None,
@@ -15,6 +17,15 @@ def breakLine(line):
     else:
       nl+=w
   return nl+"\n"
+
+def getType(typ):
+  a=None
+  if typ != None:
+    a=re.search('\((.*?)\)',typ)
+  if a != None:
+    return a.group(1).replace('kind=','')
+  else:
+    return None
 
 def processDefines(defines):
   cons=''
@@ -42,16 +53,13 @@ def processDefines(defines):
   cons+="integer, parameter :: ZMQ_VERSION = 10000*ZMQ_VERSION_MAJOR + 100*ZMQ_VERSION_MINOR + ZMQ_VERSION_PATCH\n"  
   return cons
 
-def camel(name):
-  almostThere=''.join(n.capitalize() for n in name.split('_')).replace('*','')
-  return almostThere[0].lower()+almostThere[1:]  
-
 def listArgs(args):
   na=[arg.strip().split()[-1].replace('*','') for arg in args if arg != '']
   return ','.join(na)
 
 def typeArgs(args):
   ans=''
+  imp=[]
   na=[arg.strip().split()[-1] for arg in args if arg != '']
   tys=[' '.join(arg.strip().split()[0:-1]) for arg in args if arg != '']
   for ty,arg in zip(tys,na):
@@ -65,13 +73,16 @@ def typeArgs(args):
       typ=ty
     else:
       typ=typesd[ty]
-    ans+='{0:s}, {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
-  return ans
+    ans+='      {0:s}, {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
+    h=getType(typ)
+    if h is not None:
+      imp.append(h)
+  return ans,set(imp)
 
 def processFunctions(functions,head):
   ans='module zmq\n'
   ans+=head
-  ans+='\ninterface\n'
+  ans+='\n  interface\n'
   for function in functions:
     ans+='\n!! {0:s}\n'.format(function) 
     name=function.split('(')[0].split()[-1].strip()
@@ -85,15 +96,24 @@ def processFunctions(functions,head):
       tt='function'
     fname=name.replace('*','')
     if len(args)>1:
-      ans+="{0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,
+      ans+="    {0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,
            listArgs(args))
-      ans+=typeArgs(args)
+      arg,imp=typeArgs(args)
+      z=getType(typesd[typ])
+      if z is not None:
+        ans+='      import {0:s}\n'.format(', '.join(imp|set([z])))
+      else:
+        ans+='      import {0:s}\n'.format(', '.join(imp))
+      ans+=arg
     else:
-      ans+="{0:s} {1:s}() bind(c)\n".format(tt,fname)
+      ans+="    {0:s} {1:s}() bind(c)\n".format(tt,fname)
+      z=getType(typesd[typ])
+      if z is not None:
+        ans+='      import {0:s}\n'.format(z)
     if typ != 'void':
-      ans+="{0:s} :: {1:s}\n".format(typesd[typ],fname)
-    ans+='end {0:s} {1:s}\n'.format(tt,fname)
-  ans+='end interface\n'
+      ans+="      {0:s} :: {1:s}\n".format(typesd[typ],fname)
+    ans+='    end {0:s} {1:s}\n'.format(tt,fname)
+  ans+='  end interface\n'
   ans+='end module\n'
   return ans
 
@@ -107,7 +127,7 @@ def createmodule():
   cF=open(cons,'w')
   print(processDefines(defines),file=cF)
   cF.close()
-  head="use, intrinsinc :: iso_c_binding\nimplicit none\n include '{0:s}'\n public\n".format(cons)
+  head="  use, intrinsinc :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n".format(cons)
   mF=open(module,'w')
   print(processFunctions(functions,head),file=mF)
   mF.close()
