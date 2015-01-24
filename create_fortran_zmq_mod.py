@@ -64,7 +64,7 @@ def typeArgs(args):
       typ=ty
     else:
       typ=typesd[ty]
-    ans+='type({0:s}), {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
+    ans+='{0:s}, {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
   return ans
 
 def processFunctions(functions):
