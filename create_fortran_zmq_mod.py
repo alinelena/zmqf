@@ -72,15 +72,17 @@ def typeArgs(args):
   for ty,arg in zip(tys,na):
     if arg[0]=='*' or ty[-1]=='*':
       intent='intent(inout)'
+      intent=''
     else:
       intent='intent(in   ), value'
+      intent=''
     if arg[0]=='*' and ty=='void':
       ty+='*'
     if ty not in typesd.keys():
-      typ=ty
+      typ='type({0:s})'.format(ty)
     else:
       typ=typesd[ty]
-    ans+='      {0:s}, {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
+    ans+='      {0:s} {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
     h=getType(typ)
     if h is not None:
       imp.append(h)
@@ -117,7 +119,7 @@ def processFunctions(functions):
       if z is not None:
         ans+='      import {0:s}\n'.format(z)
     if typ != 'void':
-      ans+="      {0:s} :: {1:s}\n".format(typesd[typ],fname)
+      ans+="      {0:s} :: {1:s}\n".format(typesd[typ].replace(', value',''),fname)
     ans+='    end {0:s} {1:s}\n'.format(tt,fname)
     ans+='  end interface\n'
   
