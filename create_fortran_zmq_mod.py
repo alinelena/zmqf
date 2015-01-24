@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 typesd={'int':'c_int','long int':'c_short', 'long':'c_short','size_t':'c_size_t', 
-'void*':'integer(kind=8)','void':None,
+'void*':'type(c_ptr), value','void':None,
 'char*':"CHARRR",'uint8_t*':'uint8_t*'
 }
 def breakLine(line):
@@ -57,7 +57,7 @@ def typeArgs(args):
     if arg[0]=='*' or ty[-1]=='*':
       intent='intent(inout)'
     else:
-      intent='intent(in   )'
+      intent='intent(in   ), value'
     if arg[0]=='*' and ty=='void':
       ty+='*'
     if ty not in typesd.keys():
@@ -87,7 +87,7 @@ def processFunctions(functions):
     else:
       print("{0:s} {1:s}()\n".format(tt,camel(name)))
     if typ != 'void':
-      print("type({0:s}) :: {1:s}".format(typesd[typ],fname))
+      print("{0:s} :: {1:s}".format(typesd[typ],fname))
 
 def createmodule():
 
