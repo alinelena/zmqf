@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-typesd={'int':'c_int','long int':'c_short', 'long':'c_short','size_t':'c_size_t', 
+typesd={'int':'integer(c_int)','long int':'integer(c_long)',
+'long':'integer(c_long)','size_t':'integer(c_size_t)', 
 'void*':'type(c_ptr), value','void':None,
 'char*':"CHARRR",'uint8_t*':'uint8_t*'
 }
@@ -67,9 +68,12 @@ def typeArgs(args):
     ans+='{0:s}, {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
   return ans
 
-def processFunctions(functions):
+def processFunctions(functions,head):
   funcs={}
+  ans='module zmq\n'
+  ans+=head
   for function in functions:
+    ans+='\ninterface\n'
     name=function.split('(')[0].split()[-1].strip()
     typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
     args=function.split('(')[1].replace(');','').split(',')
@@ -79,26 +83,31 @@ def processFunctions(functions):
       tt='subroutine'
     else:
       tt='function'
-    print(typ,name,args)
     fname=camel(name)
     if len(args)>1:
-      print("{0:s} {1:s}({2:s})\n".format(tt,camel(name),listArgs(args)))
-      print(typeArgs(args))
+      ans+="{0:s} {1:s}({2:s})\n".format(tt,camel(name),listArgs(args))
+      ans+=typeArgs(args)
     else:
-      print("{0:s} {1:s}()\n".format(tt,camel(name)))
+      ans+="{0:s} {1:s}()\n".format(tt,camel(name))
     if typ != 'void':
-      print("{0:s} :: {1:s}".format(typesd[typ],fname))
-
+      ans+="{0:s} :: {1:s}\n".format(typesd[typ],fname)
+    ans+='end interface\n'
+  ans+='end module\n'
+  return ans
 def createmodule():
 
   inh="/usr/include/zmq.h"
   lines=open(inh).read().replace("\\\n",'').split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
   functions = [ line for line in lines if line.startswith('ZMQ_EXPORT')] 
-  cF=open('zmq_constants.F90','w')
+  cons='zmq_constants.F90'
+  module='zmq.F08'
+  cF=open(cons,'w')
   print(processDefines(defines),file=cF)
   cF.close()
-  processFunctions(functions)
-
+  head="use, intrinsinc :: iso_c_binding\nimplicit none\n include '{0:s}'\n public\n".format(cons)
+  mF=open(module,'w')
+  print(processFunctions(functions,head),file=mF)
+  mF.close()
 if __name__ == '__main__':
   createmodule()
