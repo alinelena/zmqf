@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-import re
+
+import os, sys, re
 
 typesd={'int':'integer(c_int)','long int':'integer(c_long)',
-'long':'integer(c_long)','size_t':'integer(c_size_t)', 
-'void*':'type(c_ptr), value','void':None,
-'char*':'character(kind=c_char), dimension(*)','uint8_t*':'uint8_t*'
+  'long':'integer(c_long)','size_t':'integer(c_size_t)', 
+  'void*':'type(c_ptr), value','void':None,
+  'char*':'character(kind=c_char), dimension(*)','uint8_t*':'uint8_t*'
 }
+
 def breakLine(line):
   ll=0
   nl=''
@@ -79,10 +81,8 @@ def typeArgs(args):
       imp.append(h)
   return ans,set(imp)
 
-def processFunctions(functions,head):
-  ans='module zmq\n'
-  ans+=head
-  ans+='\n  interface\n'
+def processFunctions(functions):
+  ans='\n  interface\n'
   for function in functions:
     ans+='\n!! {0:s}\n'.format(function) 
     name=function.split('(')[0].split()[-1].strip()
@@ -114,8 +114,67 @@ def processFunctions(functions,head):
       ans+="      {0:s} :: {1:s}\n".format(typesd[typ],fname)
     ans+='    end {0:s} {1:s}\n'.format(tt,fname)
   ans+='  end interface\n'
-  ans+='end module\n'
+  
   return ans
+
+
+def figure_types(l):
+    tmp = l.replace('*', '* ').strip('; ').split(',')
+    names = ', '.join([tmp[0].split()[-1]] + tmp[1:])
+    ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
+    #print(ctype, names)
+    if ctype not in typesd:
+        ftype = '*to be def* ' + ctype
+    else:
+        ftype = typesd[ctype]
+        
+    return ftype + ' :: ' + names
+
+
+def processStructs(s, indent):
+    
+    struct_spt = re.compile(r'struct \s* { \s* (.*?) \s* } \s* (\w+) \s*; (?isx)')
+    
+    structs = struct_spt.findall(s)
+    
+    ##re.search(r"('ZMQ_EXPORT'.*?';')",blob)
+    
+    #for i in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?sx)', s):
+        #print(i,'\n')
+    
+    #sys.exit(0)
+    fstructs = []
+    for st in structs:
+        ft = []
+        body, name = st
+        #print (name, body)
+        ft.append('type, bind(c) :: ' + name)
+        
+        for l in body.splitlines():
+            if l.strip().startswith('#'):
+                ft.append(l)
+            else:
+                ft.append(' '*indent + figure_types(l))
+        ft.append('end type')
+        
+        fstructs.append('\n'.join(ft))
+    
+    return '\n\n'.join(fstructs)
+
+
+def clean(s):
+    s = s.replace("\\\n",'').strip()
+    
+    iline_comments_ptr = re.compile(r'// .* (?imx)')
+    mline_comments_ptr = re.compile(r'/[*] .*? [*]/ (?isx)')
+    endl_ptr = re.compile(r'\s+; (?ix)')
+    
+    for p in iline_comments_ptr, mline_comments_ptr, endl_ptr:
+        s = p.sub('', s)
+
+    return s
+
+
 
 def createmodule():
   inh="/usr/include/zmq.h"
@@ -124,13 +183,25 @@ def createmodule():
   defines = [ line for line in lines if line.startswith('#define')] 
   functions = [ line.replace('\n','') for line in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)] 
   cons='zmq_constants.F90'
-  module='zmq.F08'
+  module='zmq.F90'
   cF=open(cons,'w')
   print(processDefines(defines),file=cF)
   cF.close()
-  head="  use, intrinsinc :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n".format(cons)
+  
+  indent = 2
+  
+  head = "module zmq\n  use, intrinsinc :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n\n".format(cons)  
+  
+  # the function indents only within its own level
+  head += ' '*indent + processStructs(clean(open(inh).read()), indent).replace('\n', '\n'+' '*indent)
+  head += '\n' + processFunctions(functions)
+  head += 'end module\n'
+  
+  #do not indent preprocessing
+  head = re.sub(r'^ \s* [#] (?isxm)', '#', head)
+
   mF=open(module,'w')
-  print(processFunctions(functions,head),file=mF)
+  print(head, file=mF)
   mF.close()
 if __name__ == '__main__':
   createmodule()
