@@ -6,12 +6,14 @@ typesd={'int':'integer(c_int)','long int':'integer(c_long)',
   'long':'integer(c_long)','size_t':'integer(c_size_t)', 
   'void*':'type(c_ptr), value','void':None,
   'char*':'character(kind=c_char), dimension(*)',
+  'const char*':'character(kind=c_char), dimension(*)',
   'char':'character(kind=c_char), dimension(*)',
   'uint8_t*':'integer(c_int8_t), dimension(*)',
   'uint16_t':'integer(c_int16_t)',
   'int32_t':'integer(c_int32_t)',
   'short':'integer(c_short)',
-  'short int':'integer(c_short)'
+  'short int':'integer(c_short)',
+  'const void*':'type(c_ptr), value'
 }
 
 def breakLine(line):
@@ -70,7 +72,7 @@ def typeArgs(args):
   imp=[]
   h=None
   na=[arg.strip().split()[-1] for arg in args if arg != '']
-  tys=[' '.join(arg.strip().split()[0:-1]) for arg in args if arg != '']
+  tys=[' '.join(arg.replace('const','').strip().split()[0:-1]) for arg in args if arg != '']
   for ty,arg in zip(tys,na):
     if arg[0]=='*' or ty[-1]=='*':
       intent='intent(inout)'
@@ -130,7 +132,6 @@ def processFunctions(functions):
 
 def figure_types(l):
     tmp = l.replace('*', '* ').strip('; ').split(',')
-    print (tmp)
     names = ', '.join([tmp[0].split()[-1]] + tmp[1:]).replace('[','(').replace(']',')')
     ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
     if ctype not in typesd:
@@ -178,7 +179,6 @@ def clean(s):
         s, n = re.subn(r'[*] \s* ,      (?ix)', '*s%i,'%i, s, count = 1) # put dummy args for *
         i += 1
     
-    print (s)
     return s
 
 
