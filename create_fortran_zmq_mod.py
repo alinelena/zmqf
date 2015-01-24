@@ -5,7 +5,7 @@ import os, sys, re
 typesd={'int':'integer(c_int)','long int':'integer(c_long)',
   'long':'integer(c_long)','size_t':'integer(c_size_t)', 
   'void':'type(c_ptr)',
-  'char':'character(kind=c_char), dimension(*)',
+  'char':'character(kind=c_char)',
   'unsigned char':'character(kind=c_signed_char), dimension(*)',
   'uint8_t':'integer(c_int8_t)',
   'uint16_t':'integer(c_int16_t)',
@@ -85,8 +85,11 @@ def typeArgs(args):
 
     if nty[-1]=='*':
       intent=', intent(inout)'
+      ast=','.join(re.findall(r'\*',nty))
+      attr=', dimension({0:s})'.format(ast)
     else:
       intent=', intent(in)'
+
     if nty == 'void*':
       intent=', intent(in)'
       attr=', value'
@@ -108,8 +111,9 @@ def typeArgs(args):
   return ans,set(imp)
 
 def processFunctions(functions):
-  ans='  interface\n'
+  ans='\n  interface\n'
   for function in functions:
+    imp=set()
     ans+='\n!! {0:s}\n'.format(function) 
     name=function.split('(')[0].split()[-1].strip()
     typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
@@ -136,12 +140,7 @@ def processFunctions(functions):
     if larg != '':
       ans+=arg
 
-#    else:
-#      ans+="    {0:s} {1:s}() bind(c)\n".format(tt,fname)
-#      z=getType(typesd[ntyp])
-#      if z is not None:
-#        ans+='      import {0:s}\n'.format(z)
-    if ntyp != 'void':
+    if typ != 'void':
       ans+="      {0:s} :: {1:s}\n".format(typesd[ntyp],fname)
     ans+='    end {0:s} {1:s}\n'.format(tt,fname)
   ans+='  end interface\n'
