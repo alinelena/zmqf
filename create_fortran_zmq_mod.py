@@ -119,9 +119,10 @@ def processFunctions(functions,head):
 
 def createmodule():
   inh="/usr/include/zmq.h"
-  lines=open(inh).read().replace("\\\n",'').split('\n')
+  blob=open(inh).read().replace("\\\n",'')
+  lines=blob.split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
-  functions = [ line for line in lines if line.startswith('ZMQ_EXPORT')] 
+  functions = [ line.replace('\n','') for line in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)] 
   cons='zmq_constants.F90'
   module='zmq.F08'
   cF=open(cons,'w')
