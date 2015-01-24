@@ -6,6 +6,7 @@ typesd={'int':'integer(c_int)','long int':'integer(c_long)',
   'long':'integer(c_long)','size_t':'integer(c_size_t)', 
   'void*':'type(c_ptr), value','void':None,
   'char*':'character(kind=c_char), dimension(*)',
+  'char':'character(kind=c_char), dimension(*)',
   'uint8_t*':'integer(c_int8_t), dimension(*)',
   'uint16_t':'integer(c_int16_t)',
   'int32_t':'integer(c_int32_t)',
@@ -67,6 +68,7 @@ def listArgs(args):
 def typeArgs(args):
   ans=''
   imp=[]
+  h=None
   na=[arg.strip().split()[-1] for arg in args if arg != '']
   tys=[' '.join(arg.strip().split()[0:-1]) for arg in args if arg != '']
   for ty,arg in zip(tys,na):
@@ -82,8 +84,8 @@ def typeArgs(args):
       typ='type({0:s})'.format(ty)
     else:
       typ=typesd[ty]
+      h=getType(typ)
     ans+='      {0:s} {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
-    h=getType(typ)
     if h is not None:
       imp.append(h)
   return ans,set(imp)
