@@ -71,9 +71,9 @@ def typeArgs(args):
 def processFunctions(functions,head):
   ans='module zmq\n'
   ans+=head
+  ans+='\ninterface\n'
   for function in functions:
-    ans+='!! {0:s}'.format(function) 
-    ans+='\ninterface\n'
+    ans+='\n!! {0:s}\n'.format(function) 
     name=function.split('(')[0].split()[-1].strip()
     typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
     args=function.split('(')[1].replace(');','').split(',')
@@ -83,17 +83,17 @@ def processFunctions(functions,head):
       tt='subroutine'
     else:
       tt='function'
-    fname=camel(name)
+    fname=name.replace('*','')
     if len(args)>1:
-      ans+="{0:s} {1:s}({2:s}) bind(c,name='{3:s}')\n".format(tt,camel(name),
-           listArgs(args),name.replace('*',''))
+      ans+="{0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,
+           listArgs(args))
       ans+=typeArgs(args)
     else:
-      ans+="{0:s} {1:s}() bind(c,name='{2:s}')\n".format(tt,camel(name),name.replace('*',''))
+      ans+="{0:s} {1:s}() bind(c)\n".format(tt,fname)
     if typ != 'void':
       ans+="{0:s} :: {1:s}\n".format(typesd[typ],fname)
     ans+='end {0:s} {1:s}\n'.format(tt,fname)
-    ans+='end interface\n'
+  ans+='end interface\n'
   ans+='end module\n'
   return ans
 
