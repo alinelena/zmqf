@@ -4,16 +4,14 @@ import os, sys, re
 
 typesd={'int':'integer(c_int)','long int':'integer(c_long)',
   'long':'integer(c_long)','size_t':'integer(c_size_t)', 
-  'void*':'type(c_ptr), value','void':None,
-  'char*':'character(kind=c_char), dimension(*)',
-  'const char*':'character(kind=c_char), dimension(*)',
+  'void':'type(c_ptr)',
   'char':'character(kind=c_char), dimension(*)',
-  'uint8_t*':'integer(c_int8_t), dimension(*)',
+  'unsigned char':'character(kind=c_signed_char), dimension(*)',
+  'uint8_t':'integer(c_int8_t)',
   'uint16_t':'integer(c_int16_t)',
   'int32_t':'integer(c_int32_t)',
   'short':'integer(c_short)',
   'short int':'integer(c_short)',
-  'const void*':'type(c_ptr), value'
 }
 
 def breakLine(line):
@@ -74,58 +72,79 @@ def typeArgs(args):
   na=[arg.strip().split()[-1] for arg in args if arg != '']
   tys=[' '.join(arg.replace('const','').strip().split()[0:-1]) for arg in args if arg != '']
   for ty,arg in zip(tys,na):
-    if arg[0]=='*' or ty[-1]=='*':
-      intent='intent(inout)'
-      intent=''
+    intent=''
+    attr=''
+    ### all the starts go to the type
+    res=re.subn(r'\*','',arg)
+    narg=res[0]
+
+    if res[1] > 0:
+      nty=ty+'*'*res[1]
     else:
-      intent='intent(in   ), value'
-      intent=''
-    if arg[0]=='*' and ty=='void':
-      ty+='*'
-    if ty not in typesd.keys():
-      typ='type({0:s})'.format(ty)
+      nty=ty
+
+    if nty[-1]=='*':
+      intent=', intent(inout)'
     else:
-      typ=typesd[ty]
+      intent=', intent(in)'
+    if nty == 'void*':
+      intent=', intent(in)'
+      attr=', value'
+
+    nnty=nty.replace('*','')
+    if nnty not in typesd.keys():
+      #check if opaque:
+      if nnty.startswith('struct'):
+        typ='type({0:s})'.format('c_ptr')
+      else:  
+        typ='type({0:s})'.format(nnty)
+    else:
+      typ=typesd[nnty]
       h=getType(typ)
-    ans+='      {0:s} {1:s} :: {2:s}\n'.format(typ,intent,arg.replace('*',''))
+    ans+='      {0:s}{1:s}{2:s} :: {3:s}\n'.format(typ,intent,attr,narg)
     if h is not None:
       imp.append(h)
+
   return ans,set(imp)
 
 def processFunctions(functions):
-  ans=''
+  ans='  interface\n'
   for function in functions:
     ans+='\n!! {0:s}\n'.format(function) 
-    ans+='  interface\n'
     name=function.split('(')[0].split()[-1].strip()
     typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
     args=function.split('(')[1].replace(');','').split(',')
-    if name[0]=='*':
-      typ+='*'
-    if typ.strip()=='void':
+    fname=name.replace('*','')
+    typ=typ+''.join(re.findall(r'\*',name))
+
+    ntyp=typ.replace('*','')
+    if typ.strip() == 'void':
       tt='subroutine'
     else:
       tt='function'
-    fname=name.replace('*','')
-    if len(args)>1:
-      ans+="    {0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,
-           listArgs(args))
+    larg=listArgs(args)
+    if larg == 'void':  
+      larg=''
+    ans+="    {0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,larg)
+    if larg != '':
       arg,imp=typeArgs(args)
-      z=getType(typesd[typ])
-      if z is not None:
-        ans+='      import {0:s}\n'.format(', '.join(imp|set([z])))
-      else:
-        ans+='      import {0:s}\n'.format(', '.join(imp))
-      ans+=arg
+    z=getType(typesd[ntyp])
+    if z is not None:
+      ans+='      import {0:s}\n'.format(', '.join(imp|set([z])))
     else:
-      ans+="    {0:s} {1:s}() bind(c)\n".format(tt,fname)
-      z=getType(typesd[typ])
-      if z is not None:
-        ans+='      import {0:s}\n'.format(z)
-    if typ != 'void':
-      ans+="      {0:s} :: {1:s}\n".format(typesd[typ].replace(', value',''),fname)
+      ans+='      import {0:s}\n'.format(', '.join(imp))
+    if larg != '':
+      ans+=arg
+
+#    else:
+#      ans+="    {0:s} {1:s}() bind(c)\n".format(tt,fname)
+#      z=getType(typesd[ntyp])
+#      if z is not None:
+#        ans+='      import {0:s}\n'.format(z)
+    if ntyp != 'void':
+      ans+="      {0:s} :: {1:s}\n".format(typesd[ntyp],fname)
     ans+='    end {0:s} {1:s}\n'.format(tt,fname)
-    ans+='  end interface\n'
+  ans+='  end interface\n'
   
   return ans
 
@@ -134,12 +153,13 @@ def figure_types(l):
     tmp = l.replace('*', '* ').strip('; ').split(',')
     names = ', '.join([tmp[0].split()[-1]] + tmp[1:]).replace('[','(').replace(']',')')
     ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
-    if ctype not in typesd:
+    ntype = ctype.replace('*','')
+    if ntype not in typesd:
         ftype = '*to be def* ' + ctype
     else:
-        ftype = typesd[ctype]
+        ftype = typesd[ntype]
         
-    return ftype.replace(', value','') + ' :: ' + names
+    return ftype + ' :: ' + names
 
 
 def processStructs(s, indent):
@@ -159,7 +179,7 @@ def processStructs(s, indent):
                 ft.append(l)
             else:
                 ft.append(' '*indent + figure_types(l))
-        ft.append('end type')
+        ft.append('end type ' + name)
         
         fstructs.append('\n'.join(ft))
     
