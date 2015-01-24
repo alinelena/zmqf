@@ -2,7 +2,7 @@
 typesd={'int':'integer(c_int)','long int':'integer(c_long)',
 'long':'integer(c_long)','size_t':'integer(c_size_t)', 
 'void*':'type(c_ptr), value','void':None,
-'char*':"CHARRR",'uint8_t*':'uint8_t*'
+'char*':'character(kind=c_char), dimension(*)','uint8_t*':'uint8_t*'
 }
 def breakLine(line):
   ll=0
@@ -69,10 +69,10 @@ def typeArgs(args):
   return ans
 
 def processFunctions(functions,head):
-  funcs={}
   ans='module zmq\n'
   ans+=head
   for function in functions:
+    ans+='!! {0:s}'.format(function) 
     ans+='\ninterface\n'
     name=function.split('(')[0].split()[-1].strip()
     typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
