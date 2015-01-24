@@ -130,7 +130,8 @@ def processFunctions(functions):
 
 def figure_types(l):
     tmp = l.replace('*', '* ').strip('; ').split(',')
-    names = ', '.join([tmp[0].split()[-1]] + tmp[1:])
+    print (tmp)
+    names = ', '.join([tmp[0].split()[-1]] + tmp[1:]).replace('[','(').replace(']',')')
     ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
     if ctype not in typesd:
         ftype = '*to be def* ' + ctype
@@ -142,7 +143,7 @@ def figure_types(l):
 
 def processStructs(s, indent):
     
-    struct_spt = re.compile(r'struct \s* { \s* (.*?) \s* } \s* (\w+) \s*; (?isx)')
+    struct_spt = re.compile(r'struct \s* \w* \s* { \s* (.*?) \s* } \s* (\w+) \s*; (?isx)')
     structs = struct_spt.findall(s)
     
     fstructs = []
@@ -165,22 +166,26 @@ def processStructs(s, indent):
 
 
 def clean(s):
-    s = s.replace("\\\n",'').strip()
+    s = s.replace("\\\n",'').strip()  
+    s = re.sub(r'// .*         (?ixm)',  '', s) # delete inline comments
+    s = re.sub(r'/[*] .*? [*]/ (?ixs)',  '', s) # delete multiline comments
+    s = re.sub(r'\s+ ;          (?ix)', ';', s) # bring endline forward
+    s = re.sub(r'\s+ \[         (?ix)', '[', s) # bring [ forward
     
-    iline_comments_ptr = re.compile(r'// .* (?imx)')
-    mline_comments_ptr = re.compile(r'/[*] .*? [*]/ (?isx)')
-    endl_ptr = re.compile(r'\s+; (?ix)')
+    i = 0
+    n = 1
+    while (n > 0):
+        s, n = re.subn(r'[*] \s* ,      (?ix)', '*s%i,'%i, s, count = 1) # put dummy args for *
+        i += 1
     
-    for p in iline_comments_ptr, mline_comments_ptr, endl_ptr:
-        s = p.sub('', s)
-
+    print (s)
     return s
 
 
 
 def createmodule():
   inh="/usr/include/zmq.h"
-  blob=open(inh).read().replace("\\\n",'')
+  blob = clean(open(inh).read())
   lines=blob.split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
   functions = [ line.replace('\n','') for line in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)] 
@@ -195,7 +200,7 @@ def createmodule():
   head = "module zmq\n  use, intrinsic :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n\n".format(cons)  
   
   # the function indents only within its own level
-  head += ' '*indent + processStructs(clean(open(inh).read()), indent).replace('\n', '\n'+' '*indent)
+  head += ' '*indent + processStructs(blob, indent).replace('\n', '\n'+' '*indent)
   head += '\n' + processFunctions(functions)
   head += 'end module\n'
   
