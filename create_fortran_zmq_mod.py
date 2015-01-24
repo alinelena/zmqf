@@ -190,7 +190,7 @@ def createmodule():
   
   indent = 2
   
-  head = "module zmq\n  use, intrinsinc :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n\n".format(cons)  
+  head = "module zmq\n  use, intrinsic :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n\n".format(cons)  
   
   # the function indents only within its own level
   head += ' '*indent + processStructs(clean(open(inh).read()), indent).replace('\n', '\n'+' '*indent)
@@ -203,5 +203,6 @@ def createmodule():
   mF=open(module,'w')
   print(head, file=mF)
   mF.close()
+
 if __name__ == '__main__':
   createmodule()
