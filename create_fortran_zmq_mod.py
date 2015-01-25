@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys, re
+import sys, re
 
 typesd = {
   'void'          : 'type(c_ptr)',
@@ -92,23 +92,25 @@ def typeArgs(args, funptrs):
     else:
       nty=ty
 
-    #print([ na, args, ty])
     if nty[-1]=='*':
       intent=', intent(inout)'
-      if hasSizeT:
+      if hasSizeT or nty.startswith('char*'):
         ast=','.join(re.findall(r'\*',nty))
         attr=', dimension({0:s})'.format(ast)
+     
     else:
       intent=', intent(in)'
 
     if nty == 'void*':
       intent=', intent(in)'
       attr=', value'
+
     nnty=nty.replace('*','')
     if nnty not in typesd.keys():
       #check if opaque:
       if nnty.startswith('struct'):
         typ='type({0:s})'.format('c_ptr')
+        attr=''
       else:  
         typ='type({0:s})'.format(nnty)
     else:
@@ -244,7 +246,12 @@ def clean(s):
 
 
 def createmodule():
-  inh="/usr/include/zmq.h"
+  if len(sys.argv)==2:
+    inh=sys.argv[1]
+  else:
+    inh='/usr/include/zmq.h'
+    print("No path passed default will be used")
+  print("process {0:s}".format(inh))
   blob = clean(open(inh).read())
   lines=blob.split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
