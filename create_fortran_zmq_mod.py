@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, sys, re
+import sys, re
 
 typesd = {
   'void'          : 'type(c_ptr)',
@@ -250,6 +250,8 @@ def createmodule():
     inh=sys.argv[1]
   else:
     inh='/usr/include/zmq.h'
+    print("No path passed default will be used")
+  print("process {0:s}".format(inh))
   blob = clean(open(inh).read())
   lines=blob.split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
