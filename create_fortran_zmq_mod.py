@@ -173,7 +173,7 @@ def processFunctions(blob,indent):
 
 def figure_types(l):
     tmp = l.replace('*', '* ').strip('; ').split(',')
-    names = ', '.join([tmp[0].split()[-1]] + tmp[1:]).replace('[','(').replace(']',')')
+    names = ', '.join([tmp[0].split()[-1]] + tmp[1:]).replace('_[','c(').replace(']',')')
     ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
     ntype = ctype.replace('*','')
     if ntype not in typesd:
