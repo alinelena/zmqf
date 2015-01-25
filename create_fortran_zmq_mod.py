@@ -92,12 +92,12 @@ def typeArgs(args, funptrs):
     else:
       nty=ty
 
-    #print([ na, args, ty])
     if nty[-1]=='*':
       intent=', intent(inout)'
-      if hasSizeT:
+      if hasSizeT or nty.startswith('char*'):
         ast=','.join(re.findall(r'\*',nty))
         attr=', dimension({0:s})'.format(ast)
+     
     else:
       intent=', intent(in)'
 
