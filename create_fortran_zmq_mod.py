@@ -246,7 +246,10 @@ def clean(s):
 
 
 def createmodule():
-  inh="/usr/include/zmq.h"
+  if len(sys.argv)==2:
+    inh=sys.argv[1]
+  else:
+    inh='/usr/include/zmq.h'
   blob = clean(open(inh).read())
   lines=blob.split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
