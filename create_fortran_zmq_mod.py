@@ -100,6 +100,7 @@ def typeArgs(args, funptrs):
      
     else:
       intent=', intent(in)'
+      attr=', value'
 
     if nty == 'void*':
       intent=', intent(in)'
