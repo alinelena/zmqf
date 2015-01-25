@@ -176,7 +176,19 @@ def processFunctions(blob,indent):
 
 def figure_types(l):
     tmp = l.replace('*', '* ').strip('; ').split(',')
-    names = ', '.join([tmp[0].split()[-1]] + tmp[1:]).replace('_[','c(').replace(']',')')
+    names = [tmp[0].split()[-1]] + tmp[1:]
+    size_ptr = re.compile(r' \[.*?\] (?ixs)')
+    for i,name in enumerate(names):
+        name = name.strip()
+        bare = size_ptr.sub('',name).strip()
+        print (bare)
+        if bare.startswith('_'): bare = 'cfvar%i'%i + bare
+        if bare.endswith('_'): bare = bare + 'cfvar%i'%i
+        mo = size_ptr.search(name)
+        size = ''
+        if mo != None: size = mo.group(0)
+        names[i] = bare + size
+    names = ', '.join(names).replace('[','(').replace(']',')')
     ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
     ntype = ctype.replace('*','')
     if ntype not in typesd:
