@@ -74,7 +74,7 @@ def listArgs(args):
   if na == ['void']: na = ''
   return ', '.join(na)
 
-def typeArgs(args):
+def typeArgs(args, funptrs):
   ans=''
   imp=[]
   h=None
@@ -112,7 +112,7 @@ def typeArgs(args):
         typ='type({0:s})'.format(nnty)
     else:
       typ=typesd[nnty]
-    if nnty in funtoptr:
+    if nnty in funptrs:
       typ='type({0:s})'.format('c_funptr')
       attr=', value'
       intent=''
@@ -124,15 +124,16 @@ def typeArgs(args):
   return ans,set(imp)
 
 def processFunctions(blob,indent):
-  
-  functions = [ fun.replace('\n','') for fun in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)]
-  funptr = re.compile(r'ZMQ_EXPORT \s* (.*?) \s* (\w+) \s* \( (.*?) \) \s* ; (?isx)')
+    
+  funptrs = re.findall(r' \w+ \s* \((\w+)\) \s* \(.*?\) \s* ; (?isx)', blob)
+  functions = [fun.replace('\n','') for fun in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)]
+  funpatrs = re.compile(r'ZMQ_EXPORT \s* (.*?) \s* (\w+) \s* \( (.*?) \) \s* ; (?isx)')
   
   ans = '\n  interface\n'
   for function in functions:
     imp=set()
     ans+='\n!! {0:s}\n'.format(function) 
-    typ, fname, args = funptr.findall(function)[0]
+    typ, fname, args = funpatrs.findall(function)[0]
     typ = typ.replace('const','').replace(' *','*').strip()
     args = args.strip().split(',')
     
@@ -154,7 +155,7 @@ def processFunctions(blob,indent):
     
     if larg != '':
       #print (fname,larg)
-      arg,imp=typeArgs(args)
+      arg,imp=typeArgs(args, funptrs)
     
     imps = imp
     z = 'c_ptr' if ptrret else getType(typesd[typ])
@@ -181,7 +182,7 @@ def figure_types(l):
     for i,name in enumerate(names):
         name = name.strip()
         bare = size_ptr.sub('',name).strip()
-        print (bare)
+        #print (bare)
         if bare.startswith('_'): bare = 'cfvar%i'%i + bare
         if bare.endswith('_'): bare = bare + 'cfvar%i'%i
         mo = size_ptr.search(name)
