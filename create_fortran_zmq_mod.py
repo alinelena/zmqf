@@ -96,7 +96,7 @@ def typeArgs(args, funptrs):
     if nty[-1]=='*':
       intent=', intent(inout)'
       ast=','.join(re.findall(r'\*',nty))
-      attr=', dimension({0:s})'.format(ast)
+ #     attr=', dimension({0:s})'.format(ast)
     else:
       intent=', intent(in)'
 
