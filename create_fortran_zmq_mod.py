@@ -104,11 +104,13 @@ def typeArgs(args, funptrs):
     if nty == 'void*':
       intent=', intent(in)'
       attr=', value'
+
     nnty=nty.replace('*','')
     if nnty not in typesd.keys():
       #check if opaque:
       if nnty.startswith('struct'):
         typ='type({0:s})'.format('c_ptr')
+        attr=''
       else:  
         typ='type({0:s})'.format(nnty)
     else:
