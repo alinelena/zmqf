@@ -12,13 +12,13 @@ program hwclient
 
   context = zmq_ctx_new()
   requester = zmq_socket (context, ZMQ_REQ)
-  rc = zmq_connect (requester, "tcp://*:5555")
+  rc = zmq_connect (requester, "tcp://*:5555"//C_NULL_CHAR)
 
   if (rc /= 0) then
     write(*,'(a,i0)')"Failure to connect with code: ",rc
     stop -1
   end if
-  buffer="Hello"
+  buffer="Hello"//C_NULL_CHAR
   lb=len(buffer)
   ierror=zmq_send(requester,c_loc(buffer),lb,0)
   lb=10;buffer=""
