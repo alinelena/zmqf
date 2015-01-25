@@ -112,7 +112,7 @@ def typeArgs(args):
         typ='type({0:s})'.format(nnty)
     else:
       typ=typesd[nnty]
-      h=getType(typ)
+    h=getType(typ)
     ans+='      {0:s}{1:s}{2:s} :: {3:s}\n'.format(typ,intent,attr,narg)
     if h is not None:
       imp.append(h)
@@ -153,7 +153,7 @@ def processFunctions(blob,indent):
       arg,imp=typeArgs(args)
     
     imps = imp
-    z = 'type(c_ptr)' if ptrret else getType(typesd[typ])
+    z = 'c_ptr' if ptrret else getType(typesd[typ])
     imps = (imp|set([z])) if z is not None else imp
     
     ans+=' '*indent*3 + 'import {0:s}\n'.format(', '.join(imps))
