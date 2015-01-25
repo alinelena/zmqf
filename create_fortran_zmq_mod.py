@@ -184,29 +184,29 @@ def processFunctions(blob,indent):
 
 
 def figure_types(l):
-    tmp = l.replace('*', '* ').strip('; ').split(',')
+    tmp = re.sub(r'[*]\s+(?ixs)','*',l.replace('*', ' *').strip('; ')).split(',')
     names = [tmp[0].split()[-1]] + tmp[1:]
     size_ptr = re.compile(r' \[.*?\] (?ixs)')
+    
+    ctype = ' '.join(tmp[0].split()[:-1])
+    ftype = typesd[ctype] if ctype in typesd else ('*to be def* ' + ctype)
+    s = ''
     for i,name in enumerate(names):
         name = name.strip()
         bare = size_ptr.sub('',name).strip()
-        #print (bare)
+        #all this is to legalise illegal in f90 variable names like '_'.
         if bare.startswith('_'): bare = 'cfvar%i'%i + bare
         if bare.endswith('_'): bare = bare + 'cfvar%i'%i
         mo = size_ptr.search(name)
         size = ''
         if mo != None: size = mo.group(0)
-        names[i] = bare + size
-    names = ', '.join(names).replace('[','(').replace(']',')')
-    ctype = ' '.join(tmp[0].split()[:-1]).replace(' *', '*')
-    ntype = ctype.replace('*','')
-    if ntype not in typesd:
-        ftype = '*to be def* ' + ctype
-    else:
-        ftype = typesd[ntype]
-        
-    return ftype + ' :: ' + names
-
+        names[i] = bare + size.replace('[','(').replace(']',')')
+        s += '\n'
+        s += ftype if not names[i].startswith('*') else 'type(c_ptr)'
+        s += ' :: '
+        s += names[i].lstrip('*')
+    
+    return s.lstrip('\n')
 
 def processStructs(s, indent):
     
@@ -224,7 +224,7 @@ def processStructs(s, indent):
             if l.strip().startswith('#'):
                 ft.append(l)
             else:
-                ft.append(' '*indent + figure_types(l))
+                ft.append(' '*indent + figure_types(l).replace('\n','\n'+' '*indent))
         ft.append('end type ' + name)
         
         fstructs.append('\n'.join(ft))
