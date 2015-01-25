@@ -162,7 +162,7 @@ def processFunctions(exportmark, funexpr, funptrs, blob, indent):
         fname = fname + '_c'
     
     larg=listArgs(args)
-    ans+=' '*indent*2 + "{0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,larg)
+    ans+=' '*indent*2 + "{0:s} {1:s}({2:s}) bind(c{3:s})\n".format(tt,fname,larg,(', name="'+ffname+'"') if ptrret else '')
     if '*' in typ:
         ffun = ' '*indent*2 + "{0:s} {1:s}({2:s})\n".format(tt,ffname,larg)
     
