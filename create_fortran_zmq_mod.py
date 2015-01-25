@@ -2,16 +2,23 @@
 
 import os, sys, re
 
-typesd={'int':'integer(c_int)','long int':'integer(c_long)',
-  'long':'integer(c_long)','size_t':'integer(c_size_t)', 
-  'void':'type(c_ptr)',
-  'char':'character(kind=c_char)',
-  'unsigned char':'character(kind=c_signed_char), dimension(*)',
-  'uint8_t':'integer(c_int8_t)',
-  'uint16_t':'integer(c_int16_t)',
-  'int32_t':'integer(c_int32_t)',
-  'short':'integer(c_short)',
-  'short int':'integer(c_short)',
+typesd = {
+  'void'          : 'type(c_ptr)',
+  'void*'         : 'type(c_ptr)',
+                    
+  'char'          : 'character(kind=c_signed_char)',
+  'unsigned char' : 'character(kind=c_char)',
+                    
+  'short'         : 'integer(c_short)',
+  'short int'     : 'integer(c_short)',
+  'int'           : 'integer(c_int)',
+  'long int'      : 'integer(c_long)',
+  'long'          : 'integer(c_long)',                      
+  'uint8_t'       : 'integer(c_int8_t)',
+  'uint16_t'      : 'integer(c_int16_t)',
+  'int32_t'       : 'integer(c_int32_t)',  
+  
+  'size_t'        : 'integer(c_size_t)', 
 }
 
 def breakLine(line):
@@ -63,7 +70,8 @@ def processDefines(defines):
 
 def listArgs(args):
   na=[arg.strip().split()[-1].replace('*','') for arg in args if arg != '']
-  return ','.join(na)
+  if na == ['void']: na = ''
+  return ', '.join(na)
 
 def typeArgs(args):
   ans=''
@@ -83,6 +91,7 @@ def typeArgs(args):
     else:
       nty=ty
 
+    #print([ na, args, ty])
     if nty[-1]=='*':
       intent=', intent(inout)'
       ast=','.join(re.findall(r'\*',nty))
@@ -110,40 +119,54 @@ def typeArgs(args):
 
   return ans,set(imp)
 
-def processFunctions(functions):
-  ans='\n  interface\n'
+def processFunctions(blob,indent):
+  
+  functions = [ fun.replace('\n','') for fun in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)]
+  funptr = re.compile(r'ZMQ_EXPORT \s* (.*?) \s* (\w+) \s* \( (.*?) \) \s* ; (?isx)')
+  
+  ans = '\n  interface\n'
   for function in functions:
     imp=set()
     ans+='\n!! {0:s}\n'.format(function) 
-    name=function.split('(')[0].split()[-1].strip()
-    typ=' '.join(function.split('(')[0].split()[1:-1]).replace('const ','')
-    args=function.split('(')[1].replace(');','').split(',')
-    fname=name.replace('*','')
-    typ=typ+''.join(re.findall(r'\*',name))
-
-    ntyp=typ.replace('*','')
-    if typ.strip() == 'void':
+    typ, fname, args = funptr.findall(function)[0]
+    typ = typ.replace('const','').replace(' *','*').strip()
+    args = args.strip().split(',')
+    
+    ptrret = ('*' in typ) and (typ != 'void*')
+    
+    if typ == 'void':
       tt='subroutine'
     else:
-      tt='function'
+      tt='function'    
+    
+    if ptrret:
+        ffname = fname
+        fname = fname + '_c'
+    
     larg=listArgs(args)
-    if larg == 'void':  
-      larg=''
-    ans+="    {0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,larg)
+    ans+=' '*indent*2 + "{0:s} {1:s}({2:s}) bind(c)\n".format(tt,fname,larg)
+    if '*' in typ:
+        ffun = ' '*indent*2 + "{0:s} {1:s}({2:s})\n".format(tt,ffname,larg)
+    
     if larg != '':
+      #print (fname,larg)
       arg,imp=typeArgs(args)
-    z=getType(typesd[ntyp])
-    if z is not None:
-      ans+='      import {0:s}\n'.format(', '.join(imp|set([z])))
-    else:
-      ans+='      import {0:s}\n'.format(', '.join(imp))
+    
+    imps = imp
+    if not ptrret:
+        z=getType(typesd[typ])
+        imps = (imp|set([z])) if z is not None else imp
+    
+    ans+=' '*indent*3 + 'import {0:s}\n'.format(', '.join(imps))
+    
     if larg != '':
       ans+=arg
 
+    ftyp = 'type(c_ptr)' if '*' in typ else typesd[typ]
     if typ != 'void':
-      ans+="      {0:s} :: {1:s}\n".format(typesd[ntyp],fname)
-    ans+='    end {0:s} {1:s}\n'.format(tt,fname)
-  ans+='  end interface\n'
+        ans+= ' '*indent*3 + "{0:s} :: {1:s}\n".format(ftyp,fname)  
+    ans+=' '*indent*2 + 'end {0:s} {1:s}\n'.format(tt,fname)
+  ans+=' '*indent*1 + 'end interface\n'
   
   return ans
 
@@ -207,7 +230,7 @@ def createmodule():
   blob = clean(open(inh).read())
   lines=blob.split('\n')
   defines = [ line for line in lines if line.startswith('#define')] 
-  functions = [ line.replace('\n','') for line in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)] 
+   
   cons='zmq_constants.F90'
   module='zmq.F90'
   cF=open(cons,'w')
@@ -220,7 +243,7 @@ def createmodule():
   
   # the function indents only within its own level
   head += ' '*indent + processStructs(blob, indent).replace('\n', '\n'+' '*indent)
-  head += '\n' + processFunctions(functions)
+  head += '\n' + processFunctions(blob, indent)
   head += 'end module\n'
   
   #do not indent preprocessing
