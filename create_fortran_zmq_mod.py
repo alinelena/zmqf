@@ -153,16 +153,15 @@ def processFunctions(blob,indent):
       arg,imp=typeArgs(args)
     
     imps = imp
-    if not ptrret:
-        z=getType(typesd[typ])
-        imps = (imp|set([z])) if z is not None else imp
+    z = 'type(c_ptr)' if ptrret else getType(typesd[typ])
+    imps = (imp|set([z])) if z is not None else imp
     
     ans+=' '*indent*3 + 'import {0:s}\n'.format(', '.join(imps))
     
     if larg != '':
       ans+=arg
 
-    ftyp = 'type(c_ptr)' if '*' in typ else typesd[typ]
+    ftyp = 'type(c_ptr)' if ptrret else typesd[typ]
     if typ != 'void':
         ans+= ' '*indent*3 + "{0:s} :: {1:s}\n".format(ftyp,fname)  
     ans+=' '*indent*2 + 'end {0:s} {1:s}\n'.format(tt,fname)
