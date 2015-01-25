@@ -81,9 +81,12 @@ def typeArgs(args, funptrs):
   imp=[]
   h=None
   na=[arg.strip().split()[-1] for arg in args if arg != '']
-  tys=[' '.join(arg.replace('const','').strip().split()[0:-1]) for arg in args if arg != '']
+  tys=[' '.join(arg.strip().split()[0:-1]) for arg in args if arg != '']
   hasSizeT= True if ','.join(tys).find(r'size_t')!=-1 else False
   for ty,arg in zip(tys,na):
+    hasConst= True if ty.find(r'const')!=-1 else False
+    if hasConst:
+      ty=ty.replace('const ','')
     intent=''
     attr=''
     ### all the stars go to the type
@@ -96,7 +99,8 @@ def typeArgs(args, funptrs):
       nty=ty
 
     if nty[-1]=='*':
-      intent=', intent(inout)'
+      if hasConst:
+        intent=', intent(in)'
       if hasSizeT or nty.startswith('char*'):
         ast=','.join(re.findall(r'\*',nty))
         attr=', dimension({0:s})'.format(ast)
@@ -106,7 +110,6 @@ def typeArgs(args, funptrs):
       attr=', value'
 
     if nty == 'void*':
-      intent=', intent(in)'
       attr=', value'
 
     nnty=nty.replace('*','')
