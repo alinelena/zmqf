@@ -2,6 +2,7 @@
 
 import os, sys, re
 
+funtoptr=['zmq_free_fn']
 typesd = {
   'void'          : 'type(c_ptr)',
   'void*'         : 'type(c_ptr)',
@@ -102,7 +103,6 @@ def typeArgs(args):
     if nty == 'void*':
       intent=', intent(in)'
       attr=', value'
-
     nnty=nty.replace('*','')
     if nnty not in typesd.keys():
       #check if opaque:
@@ -112,6 +112,10 @@ def typeArgs(args):
         typ='type({0:s})'.format(nnty)
     else:
       typ=typesd[nnty]
+    if nnty in funtoptr:
+      typ='type({0:s})'.format('c_funptr')
+      attr=', value'
+      intent=''
     h=getType(typ)
     ans+='      {0:s}{1:s}{2:s} :: {3:s}\n'.format(typ,intent,attr,narg)
     if h is not None:
