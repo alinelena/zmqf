@@ -21,6 +21,9 @@ typesd = {
   'size_t'        : 'integer(c_size_t)', 
 }
 
+
+funchars = r'[\w.,-_/\[\]\(\)\s*]' # excluding some inappropriate chars for fun name and arg list
+
 def breakLine(line):
   ll=0
   nl=''
@@ -117,8 +120,10 @@ def typeArgs(args, funptrs):
     else:
       typ=typesd[nnty]
     if nnty in funptrs:
-      typ='type({0:s})'.format('c_funptr')
-      attr=', value'
+      #typ='type({0:s})'.format('c_funptr')
+      typ='procedure('+nnty+')'
+      #attr=', value'
+      attr = ''
       intent=''
  
     h=getType(typ)
@@ -128,17 +133,17 @@ def typeArgs(args, funptrs):
 
   return ans,set(imp)
 
-def processFunctions(blob,indent):
-    
-  funptrs = re.findall(r' \w+ \s* \((\w+)\) \s* \(.*?\) \s* ; (?isx)', blob)
-  functions = [fun.replace('\n','') for fun in re.findall(r'[\n]ZMQ_EXPORT .*? ; (?isx)', blob)]
-  funpatrs = re.compile(r'ZMQ_EXPORT \s* (.*?) \s* (\w+) \s* \( (.*?) \) \s* ; (?isx)')
+def processFunctions(exportmark, funexpr, funptrs, blob, indent):
   
-  ans = '\n  interface\n'
+  functions = [fun.replace('\n','') for fun in re.findall(r'[\n]'+exportmark+'  \s* '+funchars+'*? \s* '+funexpr+' \s* \( '+funchars+'*? \) \s* ; (?isx)', blob)]
+  funpatrs = re.compile(exportmark+r' \s* ('+funchars+'*?) \s* ('+funexpr+') \s* \( ('+funchars+'*?) \) \s* ; (?isx)')
+  
+  ans = '\n  interface'
   for function in functions:
     imp=set()
     ans+='\n!! {0:s}\n'.format(function) 
     typ, fname, args = funpatrs.findall(function)[0]
+    fname = fname.strip('()')
     typ = typ.replace('const','').replace(' *','*').strip()
     args = args.strip().split(',')
     
@@ -179,6 +184,13 @@ def processFunctions(blob,indent):
   
   return ans
 
+def processFunpointers(blob, indent):
+    funptrs = re.findall(r' \w+ \s* \(\s*(\w+)\s*\) \s* \('+funchars+'*?\) \s* ; (?isx)', blob)
+    #print (funptrs)
+    
+    s = processFunctions('typedef', r'\(\w+\)', funptrs, blob, indent)
+    #print (s)
+    return funptrs, s
 
 def figure_types(l):
     tmp = re.sub(r'[*]\s+(?ixs)','*',l.replace('*', ' *').strip('; ')).split(',')
@@ -267,9 +279,11 @@ def createmodule():
   
   head = "module zmq\n  use, intrinsic :: iso_c_binding\n  implicit none\n  include '{0:s}'\n  public\n\n".format(cons)  
   
-  # the function indents only within its own level
-  head += ' '*indent + processStructs(blob, indent).replace('\n', '\n'+' '*indent)
-  head += '\n' + processFunctions(blob, indent)
+  head += ' '*indent + processStructs(blob, indent).replace('\n', '\n'+' '*indent)  
+  # the function finder indents only within its own level
+  funptrs, funptr_interface = processFunpointers(blob, indent)
+  head += '\n' + funptr_interface
+  head += '\n' + processFunctions('ZMQ_EXPORT', r'\w+', funptrs, blob, indent)
   head += 'end module\n'
   
   #do not indent preprocessing
