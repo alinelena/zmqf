@@ -112,7 +112,7 @@ def typeArgs(args):
         typ='type({0:s})'.format(nnty)
     else:
       typ=typesd[nnty]
-      h=getType(typ)
+    h=getType(typ)
     ans+='      {0:s}{1:s}{2:s} :: {3:s}\n'.format(typ,intent,attr,narg)
     if h is not None:
       imp.append(h)
