@@ -1,4 +1,4 @@
-program zmqhello
+program version
   use zmq
   implicit none
 
@@ -6,6 +6,6 @@ program zmqhello
 
   call zmq_version(major,minor,patch)
 
-  write(*,'(a,i0,".",i0,".",i0)')"zeromq version ",major,minor,patch
+  write(*,'(a,i0,".",i0,".",i0)')"Current 0MQ version is ",major,minor,patch
 
-end program zmqhello  
+end program version  
