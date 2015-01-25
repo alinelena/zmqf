@@ -2,7 +2,6 @@
 
 import os, sys, re
 
-funtoptr=['zmq_free_fn']
 typesd = {
   'void'          : 'type(c_ptr)',
   'void*'         : 'type(c_ptr)',
@@ -80,10 +79,11 @@ def typeArgs(args, funptrs):
   h=None
   na=[arg.strip().split()[-1] for arg in args if arg != '']
   tys=[' '.join(arg.replace('const','').strip().split()[0:-1]) for arg in args if arg != '']
+  hasSizeT= True if ','.join(tys).find(r'size_t')!=-1 else False
   for ty,arg in zip(tys,na):
     intent=''
     attr=''
-    ### all the starts go to the type
+    ### all the stars go to the type
     res=re.subn(r'\*','',arg)
     narg=res[0]
 
@@ -95,8 +95,9 @@ def typeArgs(args, funptrs):
     #print([ na, args, ty])
     if nty[-1]=='*':
       intent=', intent(inout)'
-      ast=','.join(re.findall(r'\*',nty))
- #     attr=', dimension({0:s})'.format(ast)
+      if hasSizeT:
+        ast=','.join(re.findall(r'\*',nty))
+        attr=', dimension({0:s})'.format(ast)
     else:
       intent=', intent(in)'
 
@@ -116,6 +117,7 @@ def typeArgs(args, funptrs):
       typ='type({0:s})'.format('c_funptr')
       attr=', value'
       intent=''
+ 
     h=getType(typ)
     ans+='      {0:s}{1:s}{2:s} :: {3:s}\n'.format(typ,intent,attr,narg)
     if h is not None:
