@@ -8,29 +8,31 @@ program hwclient
   type(c_ptr) :: err
   integer     :: rc 
   integer     :: ierror
-  character, target   :: buffer(10)
+  character(len=10), target :: buffer
   character(len=200),pointer :: errmsg
   integer(c_size_t) :: lb=10
+  integer :: i=10
 
   context = zmq_ctx_new()
   requester = zmq_socket (context, ZMQ_REQ)
-  rc = zmq_connect (requester, "tcp://*:5555"//C_NULL_CHAR)
+  rc = zmq_connect (requester, "tcp://127.0.0.1:5555")
 
   if (rc /= 0) then
-!   allocate(errmsg(200))
     err = zmq_strerror_c(rc)
     call c_f_pointer(err,errmsg)
     write(*,'(a,i0)'),errmsg,len(trim(errmsg))
     write(*,'(a,i0)')"Failure to connect with code: ",rc
     stop -1
   end if
-  buffer="Hello"//C_NULL_CHAR
-  lb=len(buffer)
-  ierror=zmq_send(requester,c_loc(buffer),lb,0)
-  lb=10;buffer=""
-  ierror=zmq_recv(requester,c_loc(buffer),lb,0)
-  write(*,'(a)')"Received "//buffer
+
+  do i=1,10
+    write(buffer,'(a,i0)')"Hello ",i 
+    ierror=zmq_send(requester,c_loc(buffer(1:1)),lb,0)
+    buffer=""
+    ierror=zmq_recv(requester,c_loc(buffer(1:1)),lb,0)
+    write(*,'(a)')"Received "//trim(buffer)
+  end do 
   rc = zmq_close(requester)
   rc = zmq_ctx_destroy(context)
-
+ 
 end program hwclient

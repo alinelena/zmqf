@@ -7,24 +7,25 @@ program hwserver
   type(c_ptr) :: responder
   integer     :: rc 
   integer     :: ierror
-  character, target :: buffer(10)
+  character(len=10), target :: buffer
   integer(c_size_t) :: lb=10
+  integer :: i=0
 
   context = zmq_ctx_new()
   responder = zmq_socket (context, ZMQ_REP)
-  rc = zmq_bind (responder, "tcp://*:5555"//C_NULL_CHAR)
+  rc = zmq_bind (responder, "tcp://*:5555")
 
   if (rc /= 0) then
     write(*,'(a,i0)')"Failure to bind with code: ",rc
     stop -1
   end if
-
-  ierror=zmq_recv(responder,c_loc(buffer),lb,0)
-  write(*,'(a)')"Received "//buffer
-  buffer = "Hello"//C_NULL_CHAR
-  lb=5
-  ierror=zmq_send(responder,c_loc(buffer),lb,0)
-
+  do 
+    i=i+1 
+    ierror=zmq_recv(responder,c_loc(buffer(1:1)),lb,0)
+    write(*,'(a)')"Received "//trim(buffer)
+    write(buffer,'(a,i0)')"World! ",i
+    ierror=zmq_send(responder,c_loc(buffer(1:1)),lb,0)
+  end do 
   rc = zmq_close(responder)
   rc = zmq_ctx_destroy(context)
 
