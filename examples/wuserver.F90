@@ -9,7 +9,7 @@ program wuserver
   real(kind=8) :: temp,relhum,r(3)
   integer :: zip
   character(len=100,kind=c_char),target :: update
-  integer(c_size_T) :: lu
+  integer(c_size_T) :: lu=100,i
 
   context = zmq_ctx_new()
   publisher = zmq_socket(context, ZMQ_PUB)
@@ -20,13 +20,14 @@ program wuserver
     stop -1
   end if
   call random_seed()
+  i=0
   do 
+    i=i+1
     call random_number(r)
     zip = int(50*r(1))
     temp = r(2)*215 - 80
     relhum = r(3)*50 + 10
-    write(update,'(i2,1x,2(a10,f8.2),a2)')zip,"temp: ",temp, " humidity: ",relhum," x"
-    lu = len(trim(update))
+    write(update,'(i2,1x,i7,1x,2(a10,f8.2))')zip,i,"temp: ",temp, " humidity: ",relhum
     ierror = zmq_send(publisher,c_loc(update(1:1)),lu,0)
   end do 
   rc = zmq_close(publisher)
