@@ -25,7 +25,16 @@ module zmq
   end type zmq_pollitem_t
 
   interface
+!! typedef void (zmq_free_fn) (void *data, void *hint);
+    subroutine zmq_free_fn(data, hint) bind(c)
+      import c_ptr
+      type(c_ptr), value :: data
+      type(c_ptr), value :: hint
+    end subroutine zmq_free_fn
+  end interface
 
+
+  interface
 !! ZMQ_EXPORT void zmq_version (int *major, int *minor, int *patch);
     subroutine zmq_version(major, minor, patch) bind(c)
       import c_ptr, c_int
@@ -41,7 +50,7 @@ module zmq
     end function zmq_errno
 
 !! ZMQ_EXPORT const char *zmq_strerror (int errnum);
-    function zmq_strerror_c(errnum) bind(c)
+    function zmq_strerror_c(errnum) bind(c, name="zmq_strerror")
       import c_ptr, c_int
       integer(c_int), intent(in), value :: errnum
       type(c_ptr) :: zmq_strerror_c
@@ -114,7 +123,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_msg_init_size (zmq_msg_t *msg, size_t size);
     function zmq_msg_init_size(msg, size) bind(c)
-      import zmq_msg_t, c_size_t, c_int
+      import c_size_t, zmq_msg_t, c_int
       type(zmq_msg_t), dimension(*) :: msg
       integer(c_size_t), intent(in), value :: size
       integer(c_int) :: zmq_msg_init_size
@@ -122,11 +131,11 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_msg_init_data (zmq_msg_t *msg, void *data,    size_t size, zmq_free_fn *ffn, void *hint);
     function zmq_msg_init_data(msg, data, size, ffn, hint) bind(c)
-      import zmq_msg_t, c_ptr, c_size_t, c_funptr, c_int
+      import c_size_t, zmq_msg_t, c_ptr, zmq_free_fn, c_int
       type(zmq_msg_t), dimension(*) :: msg
       type(c_ptr), value :: data
       integer(c_size_t), intent(in), value :: size
-      type(c_funptr), value :: ffn
+      procedure(zmq_free_fn) :: ffn
       type(c_ptr), value :: hint
       integer(c_int) :: zmq_msg_init_data
     end function zmq_msg_init_data
@@ -181,7 +190,7 @@ module zmq
 
 !! ZMQ_EXPORT size_t zmq_msg_size (zmq_msg_t *msg);
     function zmq_msg_size(msg) bind(c)
-      import zmq_msg_t, c_size_t
+      import c_size_t, zmq_msg_t
       type(zmq_msg_t) :: msg
       integer(c_size_t) :: zmq_msg_size
     end function zmq_msg_size
@@ -227,7 +236,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_setsockopt (void *s, int option, const void *optval,    size_t optvallen);
     function zmq_setsockopt(s, option, optval, optvallen) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       integer(c_int), intent(in), value :: option
       type(c_ptr), intent(in), value :: optval
@@ -237,7 +246,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_getsockopt (void *s, int option, void *optval,    size_t *optvallen);
     function zmq_getsockopt(s, option, optval, optvallen) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       integer(c_int), intent(in), value :: option
       type(c_ptr), value :: optval
@@ -279,7 +288,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_send (void *s, const void *buf, size_t len, int flags);
     function zmq_send(s, buf, len, flags) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(c_ptr), intent(in), value :: buf
       integer(c_size_t), intent(in), value :: len
@@ -289,7 +298,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_send_const (void *s, const void *buf, size_t len, int flags);
     function zmq_send_const(s, buf, len, flags) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(c_ptr), intent(in), value :: buf
       integer(c_size_t), intent(in), value :: len
@@ -299,7 +308,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_recv (void *s, void *buf, size_t len, int flags);
     function zmq_recv(s, buf, len, flags) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(c_ptr), value :: buf
       integer(c_size_t), intent(in), value :: len
@@ -318,7 +327,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_sendmsg (void *s, zmq_msg_t *msg, int flags);
     function zmq_sendmsg(s, msg, flags) bind(c)
-      import c_ptr, zmq_msg_t, c_int
+      import zmq_msg_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(zmq_msg_t) :: msg
       integer(c_int), intent(in), value :: flags
@@ -327,7 +336,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_recvmsg (void *s, zmq_msg_t *msg, int flags);
     function zmq_recvmsg(s, msg, flags) bind(c)
-      import c_ptr, zmq_msg_t, c_int
+      import zmq_msg_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(zmq_msg_t) :: msg
       integer(c_int), intent(in), value :: flags
@@ -336,7 +345,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_sendiov (void *s, struct iovec *iov, size_t count, int flags);
     function zmq_sendiov(s, iov, count, flags) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(c_ptr) :: iov
       integer(c_size_t), intent(in), value :: count
@@ -346,7 +355,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_recviov (void *s, struct iovec *iov, size_t *count, int flags);
     function zmq_recviov(s, iov, count, flags) bind(c)
-      import c_ptr, c_size_t, c_int
+      import c_size_t, c_ptr, c_int
       type(c_ptr), value :: s
       type(c_ptr) :: iov
       integer(c_size_t), dimension(*) :: count
@@ -356,7 +365,7 @@ module zmq
 
 !! ZMQ_EXPORT int zmq_poll (zmq_pollitem_t *items, int nitems, long timeout);
     function zmq_poll(items, nitems, timeout) bind(c)
-      import zmq_pollitem_t, c_int, c_long
+      import c_long, zmq_pollitem_t, c_int
       type(zmq_pollitem_t) :: items
       integer(c_int), intent(in), value :: nitems
       integer(c_long), intent(in), value :: timeout
@@ -383,8 +392,8 @@ module zmq
     end function zmq_proxy_steerable
 
 !! ZMQ_EXPORT char *zmq_z85_encode (char *dest, uint8_t *data, size_t size);
-    function zmq_z85_encode_c(dest, data, size) bind(c)
-      import c_int8_t, c_ptr, c_signed_char, c_size_t
+    function zmq_z85_encode_c(dest, data, size) bind(c, name="zmq_z85_encode")
+      import c_size_t, c_ptr, c_int8_t, c_signed_char
       character(kind=c_signed_char), dimension(*) :: dest
       integer(c_int8_t), dimension(*) :: data
       integer(c_size_t), intent(in), value :: size
@@ -392,8 +401,8 @@ module zmq
     end function zmq_z85_encode_c
 
 !! ZMQ_EXPORT uint8_t *zmq_z85_decode (uint8_t *dest, char *string);
-    function zmq_z85_decode_c(dest, string) bind(c)
-      import c_int8_t, c_ptr, c_signed_char
+    function zmq_z85_decode_c(dest, string) bind(c, name="zmq_z85_decode")
+      import c_ptr, c_int8_t, c_signed_char
       integer(c_int8_t) :: dest
       character(kind=c_signed_char), dimension(*) :: string
       type(c_ptr) :: zmq_z85_decode_c
