@@ -10,7 +10,7 @@ program wuclient
   character(len=100,kind=c_char),target :: message,filter
   character(len=30) :: dummy
   integer(c_size_t) :: lm = 100,lf
-  integer :: i, j,n = 10
+  integer :: i, j,n = 1000
   
   context = zmq_ctx_new()
   subscriber = zmq_socket(context, ZMQ_SUB)
@@ -25,7 +25,6 @@ program wuclient
   end if
   do i=1,n
     ierror = zmq_recv(subscriber,c_loc(message(1:1)),lm,0)
-    print *, trim(message)
     read(message,*)zip,j,dummy,temp,dummy,relhum
     at = at + temp
     ar = ar + relhum
