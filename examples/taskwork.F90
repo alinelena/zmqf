@@ -12,18 +12,22 @@ program tasksink
   integer(c_size_t) :: lu=100,i,lm
 
   context = zmq_ctx_new()
-  receiver = zmq_socket(context, ZMQ_PULL)
-  rc = zmq_bind(receiver, "tcp://localhost:5557")
-  if (rc /= 0) then
-    write(*,'(a,i0)')"Failure to bind receiver with code: ",rc
-    stop -1
-  end if
+
+! The order is important for some reason. First open listening connections then senders.
 
   sender = zmq_socket(context, ZMQ_PUSH)
-  rc = zmq_bind(sender, "tcp://localhost:5558")
+  rc = zmq_connect(sender, "tcp://localhost:5558")
   if (rc /= 0) then
     write(*,'(a,i0)')"Failure to bind sender with code: ",rc
     stop -2
+  end if
+
+! It is apparently necessary to put an address and not a name to zmq_bind.
+  receiver = zmq_socket(context, ZMQ_PULL)
+  rc = zmq_bind(receiver, "tcp://127.0.0.1:5557")
+  if (rc /= 0) then
+    write(*,'(a,i0)')"Failure to bind receiver with code: ",rc
+    stop -1
   end if
 
   lu=100
@@ -34,6 +38,7 @@ program tasksink
     read(update,*)i
     write(*,'(a,i0,a)') "You shall sleep ",i," ms."
     ierror = zmq_send(sender,c_loc(msg(1:1)),lm,0) 
+    if (ierror < 0) print '("Send err: ",i0)', ierror
   end do 
 
   rc = zmq_close(receiver)

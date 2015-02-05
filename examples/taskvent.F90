@@ -17,24 +17,24 @@ program taskvent
   context = zmq_ctx_new()
 
   sender = zmq_socket(context, ZMQ_PUSH)
-  rc = zmq_bind(sender, "tcp://127.0.0.1:5557")
+  rc = zmq_connect(sender, "tcp://localhost:5557")
   if (rc /= 0) then
     write(*,'(a,i0)')"Failure to bind with code: ",rc
     stop -1
   end if
 
-  sink = zmq_socket(context, ZMQ_PUSH)
+  sink = zmq_socket(context, ZMQ_PULL)
   rc = zmq_bind(sink, "tcp://127.0.0.1:5558")
   if (rc /= 0) then
     write(*,'(a,i0)')"Failure to bind with code: ",rc
-    stop -1
+    stop -2
   end if
   write(*,*)"Press 1 when the workers are ready!"
   read(*,*) dummy
   write(*,*)"Let the flood began!"
   msg="0"
   lu=1
-  ierror = zmq_send(sink,c_loc(msg(1:1)),lu,0)
+!   ierror = zmq_send(sink,c_loc(msg(1:1)),lu,0) ! can you send over a zmq_pull socket?
 
   call random_seed()
   i=0
@@ -44,6 +44,7 @@ program taskvent
     workload = int(100*r)
     write(update,'(i3)')workload
     ierror = zmq_send(sender,c_loc(update(1:1)),lu,0)
+    if (ierror < 0) print '("Send err: ",i0)', ierror
   end do 
 
   rc = zmq_close(sink)
