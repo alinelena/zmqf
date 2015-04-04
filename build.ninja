@@ -1,0 +1,54 @@
+cc = gcc-4.9
+cflags = -O0 -g
+fc = gfortran-4.9
+fflags = -O0 -g
+modflag = -J
+ldflags = -lzmq
+
+bldpath = bld/ninja
+modpath = mods
+
+##########################################################
+
+ninja_required_version = 1.5.1
+builddir = $bldpath
+modpath = $bldpath/$modpath
+fflags = $fflags $modflag $modpath
+
+rule cmd
+    command = $cmdl
+
+rule fc
+    command = $fc $fflags -c $in -o $o
+    
+rule fl
+    command = $fc $fflags $in $ldflags -o $out
+
+rule cc
+    command = $cc $cflags -c $in -o $out
+    
+rule cl
+    command = $cc $cflags $in $ldflags -o $out
+    
+    
+    
+rule gen
+    command = python3 $in
+    generator = 1
+    
+    
+build zmq.F90 zmq_constants.F90: gen create_fortran_zmq_mod.py | /usr/include/zmq.h
+build $bldpath/zmq.F90.o $modpath/zmq.mod : fc zmq.F90
+    o = $bldpath/zmq.F90.o
+
+build $bldpath/taskvent.x: fl examples/taskvent.F90 $bldpath/zmq.F90.o | $modpath/zmq.mod
+build $bldpath/taskwork.x: fl examples/taskwork.F90 $bldpath/zmq.F90.o | $modpath/zmq.mod
+build $bldpath/tasksink.x: fl examples/tasksink.F90 $bldpath/zmq.F90.o | $modpath/zmq.mod
+
+
+build $bldpath/wuserver.x: cl examples/wuserver.c | /usr/include/zmq.h
+build $bldpath/wuclient.x: cl examples/wuclient.c | /usr/include/zmq.h
+
+build all: phony $bldpath/taskvent.x $bldpath/taskwork.x $bldpath/tasksink.x $bldpath/wuserver.x $bldpath/wuclient.x
+
+default all
